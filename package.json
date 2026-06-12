@@ -1,0 +1,27 @@
+{
+  "name": "music-digger-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Apple Music + Obsidian music discovery logging",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "music-digger-mcp": "build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node build/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}
