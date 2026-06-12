@@ -33,7 +33,7 @@ npm run build
 ```bash
 npm run dev          # tsx watch でホットリロード
 npm test             # vitest
-npm test:watch       # vitest watch
+npm run test:watch   # vitest watch
 ```
 
 ## 環境変数
