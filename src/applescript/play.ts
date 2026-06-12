@@ -10,8 +10,8 @@ export type PlayStationResult =
   | { ok: true; seed: string; starting_track: { artist: string; album: string; track: string } }
   | { ok: false; reason: 'not_found' };
 
-function escapeDoubleQuotes(s: string): string {
-  return s.replace(/"/g, '\\"');
+function escapeAppleScriptString(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 export async function playAlbumByName(
@@ -21,7 +21,7 @@ export async function playAlbumByName(
 ): Promise<PlayAlbumResult> {
   const script = `
 tell application "Music"
-  set hits to (every track of library playlist 1 whose artist is "${escapeDoubleQuotes(artist)}" and album is "${escapeDoubleQuotes(album)}")
+  set hits to (every track of library playlist 1 whose artist is "${escapeAppleScriptString(artist)}" and album is "${escapeAppleScriptString(album)}")
   if (count of hits) is 0 then
     return "not_found${SEP}${SEP}${SEP}"
   end if
@@ -32,7 +32,7 @@ end tell
 `;
   const out = await runner(script);
   const [status, a, al, t] = out.split(SEP);
-  if (status !== 'ok') return { ok: false, reason: 'not_found' };
+  if (status !== 'ok' || !a || !al || !t) return { ok: false, reason: 'not_found' };
   return { ok: true, artist: a, album: al, first_track: t };
 }
 
@@ -42,7 +42,7 @@ export async function playStationFromSeed(
 ): Promise<PlayStationResult> {
   const script = `
 tell application "Music"
-  set seedHits to (every track whose artist contains "${escapeDoubleQuotes(seed)}" or genre contains "${escapeDoubleQuotes(seed)}")
+  set seedHits to (every track whose artist contains "${escapeAppleScriptString(seed)}" or genre contains "${escapeAppleScriptString(seed)}")
   if (count of seedHits) is 0 then
     return "not_found${SEP}${SEP}${SEP}${SEP}"
   end if
@@ -59,6 +59,6 @@ end tell
 `;
   const out = await runner(script);
   const [status, artist, album, track] = out.split(SEP);
-  if (status !== 'ok') return { ok: false, reason: 'not_found' };
+  if (status !== 'ok' || !artist || !album || !track) return { ok: false, reason: 'not_found' };
   return { ok: true, seed, starting_track: { artist, album, track } };
 }

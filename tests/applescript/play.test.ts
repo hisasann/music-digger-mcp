@@ -29,6 +29,20 @@ describe('playAlbumByName', () => {
     expect(sent).toContain('Sly \\"Stone\\"');
     expect(sent).toContain('Greatest \\"Hits\\"');
   });
+
+  it('escapes backslashes in artist/album', async () => {
+    const runner = vi.fn().mockResolvedValue('not_found\x1f\x1f\x1f');
+    await playAlbumByName(runner, 'Foo\\Bar', 'Album\\X');
+    const sent = runner.mock.calls[0][0] as string;
+    expect(sent).toContain('Foo\\\\Bar');
+    expect(sent).toContain('Album\\\\X');
+  });
+
+  it('returns not_found when output is truncated', async () => {
+    const runner = vi.fn().mockResolvedValue('ok');
+    const r = await playAlbumByName(runner, 'A', 'B');
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe('playStationFromSeed', () => {
@@ -49,5 +63,18 @@ describe('playStationFromSeed', () => {
     const r = await playStationFromSeed(runner, 'Nonexistent');
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('not_found');
+  });
+
+  it('escapes double quotes and backslashes in seed', async () => {
+    const runner = vi.fn().mockResolvedValue('not_found\x1f\x1f\x1f\x1f');
+    await playStationFromSeed(runner, 'Foo "Bar"\\baz');
+    const sent = runner.mock.calls[0][0] as string;
+    expect(sent).toContain('Foo \\"Bar\\"\\\\baz');
+  });
+
+  it('returns not_found when station output is truncated', async () => {
+    const runner = vi.fn().mockResolvedValue('ok');
+    const r = await playStationFromSeed(runner, 'X');
+    expect(r.ok).toBe(false);
   });
 });
