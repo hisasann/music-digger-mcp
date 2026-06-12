@@ -48,8 +48,6 @@ export async function appendDiaryEntry(cfg: Config, entry: DiaryEntry): Promise<
   return path;
 }
 
-const ENTRY_HEADER_RE = /^## \d{2}:\d{2} — (?:[♥★×] )?(.+?) \/ (.+?) \((.+?)\)$/gm;
-
 export function parseAlbumReactions(
   diaryContents: string[],
   artist: string,
