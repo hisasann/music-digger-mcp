@@ -3,3 +3,7 @@ build/
 *.log
 .DS_Store
 .idea/
+.env
+.env.*
+*.tsbuildinfo
+coverage/
