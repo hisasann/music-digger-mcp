@@ -31,6 +31,7 @@ describe('path resolvers', () => {
       vaultPath: vault,
       diarySubdir: 'music/diary',
       albumsSubdir: 'music/albums',
+      stationsPath: 'music/stations.md',
     }, '2026-06-12');
     expect(p).toBe(join(vault, 'music/diary/2026-06-12.md'));
   });
@@ -40,6 +41,7 @@ describe('path resolvers', () => {
       vaultPath: vault,
       diarySubdir: 'music/diary',
       albumsSubdir: 'music/albums',
+      stationsPath: 'music/stations.md',
     }, 'Marvin Gaye', "What's Going On");
     expect(p).toBe(join(vault, "music/albums/Marvin Gaye - What's Going On.md"));
   });
@@ -49,6 +51,7 @@ describe('path resolvers', () => {
       vaultPath: vault,
       diarySubdir: 'music/diary',
       albumsSubdir: 'music/albums',
+      stationsPath: 'music/stations.md',
     }, 'AC/DC', 'Back in Black');
     expect(p).toBe(join(vault, 'music/albums/AC_DC - Back in Black.md'));
   });

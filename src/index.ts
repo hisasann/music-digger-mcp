@@ -32,11 +32,12 @@ const tools = [
   },
   {
     name: 'play_station',
-    description: 'Start an Apple Music station from an artist or genre seed.',
+    description:
+      'Start an Apple Music station from an artist or genre seed. ' +
+      'When seed is omitted, picks one at random from the Obsidian stations note (MUSIC_STATIONS_PATH).',
     inputSchema: {
       type: 'object',
-      properties: { seed: { type: 'string', description: 'Artist or genre' } },
-      required: ['seed'],
+      properties: { seed: { type: 'string', description: 'Artist or genre (optional; falls back to stations note)' } },
       additionalProperties: false,
     },
   },
@@ -89,7 +90,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       result = await handlePlayAlbum(deps, args as { artist: string; album: string });
       break;
     case 'play_station':
-      result = await handlePlayStation(deps, args as { seed: string });
+      result = await handlePlayStation({ ...deps, cfg }, args as { seed?: string });
       break;
     case 'playback_control':
       result = await handlePlaybackControl(deps, args as any);

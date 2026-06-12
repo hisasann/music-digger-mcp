@@ -17,6 +17,10 @@ export function resolveAlbumCardPath(cfg: Config, artist: string, album: string)
   return join(cfg.vaultPath, cfg.albumsSubdir, filename);
 }
 
+export function resolveStationsPath(cfg: Config): string {
+  return join(cfg.vaultPath, cfg.stationsPath);
+}
+
 export async function ensureSubdirs(cfg: Config): Promise<void> {
   await mkdir(join(cfg.vaultPath, cfg.diarySubdir), { recursive: true });
   await mkdir(join(cfg.vaultPath, cfg.albumsSubdir), { recursive: true });

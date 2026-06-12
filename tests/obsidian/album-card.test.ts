@@ -8,6 +8,7 @@ const cfg = (vault: string) => ({
   vaultPath: vault,
   diarySubdir: 'music/diary',
   albumsSubdir: 'music/albums',
+  stationsPath: 'music/stations.md',
 });
 
 describe('shouldPromote', () => {

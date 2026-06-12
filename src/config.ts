@@ -4,6 +4,7 @@ export interface Config {
   vaultPath: string;
   diarySubdir: string;
   albumsSubdir: string;
+  stationsPath: string;
 }
 
 export function loadConfig(): Config {
@@ -18,5 +19,6 @@ export function loadConfig(): Config {
     vaultPath,
     diarySubdir: process.env.MUSIC_DIARY_SUBDIR ?? 'music/diary',
     albumsSubdir: process.env.MUSIC_ALBUMS_SUBDIR ?? 'music/albums',
+    stationsPath: process.env.MUSIC_STATIONS_PATH ?? 'music/stations.md',
   };
 }
