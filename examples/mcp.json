@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "music-digger": {
+      "command": "node",
+      "args": ["/Users/hisasann/_/ai/music-digger-mcp/build/index.js"],
+      "env": {
+        "OBSIDIAN_VAULT_PATH": "/Users/hisasann/Library/Mobile Documents/iCloud~md~obsidian/Documents/SecondBrain"
+      }
+    }
+  }
+}
