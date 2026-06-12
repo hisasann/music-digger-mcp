@@ -50,7 +50,7 @@ tell application "Music"
   play seedTrack
   try
     tell seedTrack to reveal
-    set song station of front window to true
+    run script "tell application \\"Music\\" to set song station of front window to true"
   on error
     -- station start is best-effort; fall back to plain playback
   end try

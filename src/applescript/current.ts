@@ -14,17 +14,17 @@ const SEP = '\x1f';
 const SCRIPT = `
 tell application "Music"
   if it is running then
-    set st to player state as string
-    if st is "playing" or st is "paused" then
-      set tr to current track
-      set a to artist of tr
-      set al to album of tr
-      set t to name of tr
-      set p to player position
-      set d to duration of tr
-      return st & "${SEP}" & a & "${SEP}" & al & "${SEP}" & t & "${SEP}" & p & "${SEP}" & d
+    set playerStateText to (player state as text)
+    if playerStateText is "playing" or playerStateText is "paused" then
+      set curTrack to current track
+      set curArtist to artist of curTrack
+      set curAlbum to album of curTrack
+      set curName to name of curTrack
+      set curPos to player position
+      set curDur to duration of curTrack
+      return playerStateText & "${SEP}" & curArtist & "${SEP}" & curAlbum & "${SEP}" & curName & "${SEP}" & curPos & "${SEP}" & curDur
     else
-      return st & "${SEP}${SEP}${SEP}${SEP}${SEP}"
+      return playerStateText & "${SEP}${SEP}${SEP}${SEP}${SEP}"
     end if
   else
     return "stopped${SEP}${SEP}${SEP}${SEP}${SEP}"

@@ -41,9 +41,9 @@ export async function sendPlaybackAction(
   const script = `
 tell application "Music"
   ${body}
-  set st to player state as string
-  set rm to song repeat as string
-  return st & "${SEP}" & rm
+  set playerStateText to (player state as text)
+  set repeatModeText to (song repeat as text)
+  return playerStateText & "${SEP}" & repeatModeText
 end tell
 `;
   const out = await runner(script);
