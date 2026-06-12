@@ -33,4 +33,18 @@ describe('getCurrentTrack', () => {
     expect(result.artist).toBe('Artist');
     expect(result.album).toBe('Album');
   });
+
+  it('invokes runner with a script that targets Music.app', async () => {
+    const runner = vi.fn().mockResolvedValue('stopped\x1f\x1f\x1f\x1f\x1f');
+    await getCurrentTrack(runner);
+    expect(runner).toHaveBeenCalledOnce();
+    expect(runner.mock.calls[0][0]).toContain('tell application "Music"');
+  });
+
+  it('returns undefined for position/duration when fields are non-numeric', async () => {
+    const runner = vi.fn().mockResolvedValue('playing\x1fA\x1fB\x1fT\x1fabc\x1fxyz');
+    const result = await getCurrentTrack(runner);
+    expect(result.position).toBeUndefined();
+    expect(result.duration).toBeUndefined();
+  });
 });

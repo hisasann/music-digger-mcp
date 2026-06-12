@@ -32,6 +32,12 @@ tell application "Music"
 end tell
 `;
 
+const num = (s: string | undefined): number | undefined => {
+  if (!s) return undefined;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 export async function getCurrentTrack(runner: AppleScriptRunner): Promise<CurrentTrack> {
   const out = await runner(SCRIPT);
   const [state, artist, album, track, posStr, durStr] = out.split(SEP);
@@ -43,7 +49,7 @@ export async function getCurrentTrack(runner: AppleScriptRunner): Promise<Curren
     artist: artist || undefined,
     album: album || undefined,
     track: track || undefined,
-    position: posStr ? Number(posStr) : undefined,
-    duration: durStr ? Number(durStr) : undefined,
+    position: num(posStr),
+    duration: num(durStr),
   };
 }
