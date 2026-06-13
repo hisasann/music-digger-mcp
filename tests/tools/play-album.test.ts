@@ -65,7 +65,10 @@ describe('handlePlayAlbum', () => {
     expect((r as any).playing).toBe(true);
     expect((r as any).played_in).toBe('apple_music');
     expect((r as any).now_playing.apple_music_url).toBe('https://music.apple.com/jp/album/wgo');
-    expect(opener).toHaveBeenCalledWith('open', ['-a', 'Music', 'https://music.apple.com/jp/album/wgo']);
+    expect(opener).toHaveBeenCalledWith('osascript', [
+      '-e',
+      'tell application "Music" to open location "https://music.apple.com/jp/album/wgo"',
+    ]);
     expect(store.get()).toMatchObject({ playedIn: 'apple_music', sourceSeed: "Marvin Gaye / What's Going On" });
   });
 

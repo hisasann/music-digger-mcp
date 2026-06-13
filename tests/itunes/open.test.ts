@@ -2,28 +2,26 @@ import { describe, it, expect, vi } from 'vitest';
 import { openAppleMusicUrl } from '../../src/itunes/open.js';
 
 describe('openAppleMusicUrl', () => {
-  it('opens the URL in Music.app, waits, then triggers play via osascript', async () => {
+  it('uses osascript `open location` so Music.app starts playback in one step', async () => {
     const runner = vi.fn(async () => 0);
-    const sleep = vi.fn(async () => {});
-    await openAppleMusicUrl('https://music.apple.com/jp/x', runner, sleep);
-    expect(runner).toHaveBeenNthCalledWith(1, 'open', ['-a', 'Music', 'https://music.apple.com/jp/x']);
-    expect(sleep).toHaveBeenCalledWith(600);
-    expect(runner).toHaveBeenNthCalledWith(2, 'osascript', ['-e', 'tell application "Music" to play']);
-  });
-
-  it('throws when the open step fails (and never tries to play)', async () => {
-    const runner = vi.fn(async () => 1);
-    const sleep = vi.fn(async () => {});
-    await expect(openAppleMusicUrl('https://...', runner, sleep)).rejects.toThrow(/open exited/i);
-    expect(sleep).not.toHaveBeenCalled();
+    await openAppleMusicUrl('https://music.apple.com/jp/x', runner);
     expect(runner).toHaveBeenCalledTimes(1);
+    expect(runner).toHaveBeenCalledWith('osascript', [
+      '-e',
+      'tell application "Music" to open location "https://music.apple.com/jp/x"',
+    ]);
   });
 
-  it('throws when the play step fails', async () => {
-    const calls: number[] = [];
-    const runner = vi.fn(async () => { calls.push(calls.length); return calls.length === 2 ? 1 : 0; });
-    const sleep = vi.fn(async () => {});
-    await expect(openAppleMusicUrl('https://...', runner, sleep)).rejects.toThrow(/play exited/i);
-    expect(runner).toHaveBeenCalledTimes(2);
+  it('escapes embedded quotes and backslashes in the URL for AppleScript', async () => {
+    const runner = vi.fn(async () => 0);
+    await openAppleMusicUrl('https://music.apple.com/jp/album/"foo"\\bar', runner);
+    const script = (runner.mock.calls[0][1] as string[])[1];
+    expect(script).toContain('\\"foo\\"');
+    expect(script).toContain('\\\\bar');
+  });
+
+  it('throws when osascript exits non-zero', async () => {
+    const runner = vi.fn(async () => 1);
+    await expect(openAppleMusicUrl('https://...', runner)).rejects.toThrow(/exit/i);
   });
 });

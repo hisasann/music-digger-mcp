@@ -42,7 +42,7 @@ async function startPlayback(
   seed: string,
   deps: PlayStationDeps,
 ): Promise<{ playback: CurrentPlayback; output: PlayStationOutput }> {
-  const hit = await lookupAppleMusic(chosen.title, chosen.channel, deps.itunes);
+  const hit = await lookupAppleMusic(chosen.title, chosen.channel, deps.itunes, seed);
   const now = (deps.now ?? (() => new Date()))();
   const url = videoUrl(chosen.videoId);
 

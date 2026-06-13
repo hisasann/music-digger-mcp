@@ -85,7 +85,10 @@ describe('handlePlayStation', () => {
       apple_music_artist: 'Aaron Frazer',
       apple_music_track: 'Bad News',
     });
-    expect(opener).toHaveBeenCalledWith('open', ['-a', 'Music', 'https://music.apple.com/jp/x?i=1']);
+    expect(opener).toHaveBeenCalledWith('osascript', [
+      '-e',
+      'tell application "Music" to open location "https://music.apple.com/jp/x?i=1"',
+    ]);
     expect(store.get()).toMatchObject({ playedIn: 'apple_music', appleMusicUrl: 'https://music.apple.com/jp/x?i=1' });
   });
 
