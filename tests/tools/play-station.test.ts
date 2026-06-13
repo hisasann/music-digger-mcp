@@ -75,6 +75,35 @@ describe('handlePlayStation', () => {
     expect(store.get()).toMatchObject({ videoId: 'bbb', sourceSeed: 'Aaron Frazer', playedIn: 'youtube' });
   });
 
+  it('subsequent call: overwrites the previous Safari tab via osascript instead of opening a new one', async () => {
+    const store = createPlaybackStore();
+    store.set({
+      videoId: 'OLD',
+      title: 'old',
+      channel: 'old chan',
+      url: 'https://www.youtube.com/watch?v=OLD',
+      startedAt: '2026-06-13T09:00:00.000Z',
+      playedIn: 'youtube',
+    });
+    const ytFetcher = vi.fn(async () => new Response(
+      fakeYouTubeHtml([{ videoId: 'NEW', title: 'Some Track', channel: 'Some Topic' }]),
+      { status: 200 },
+    ));
+    const opener = vi.fn(async () => 0);
+
+    await handlePlayStation(
+      { cfg: cfg(vault), store, search: { fetcher: ytFetcher }, opener },
+      { seed: 'whatever' },
+    );
+
+    expect(opener).toHaveBeenCalledTimes(1);
+    expect(opener.mock.calls[0][0]).toBe('osascript');
+    const script = (opener.mock.calls[0][1] as string[])[1];
+    expect(script).toContain('OLD');
+    expect(script).toContain('https://www.youtube.com/watch?v=NEW');
+    expect(store.get()?.videoId).toBe('NEW');
+  });
+
   it('falls back to the stations note when seed is omitted', async () => {
     mkdirSync(join(vault, 'music'), { recursive: true });
     writeFileSync(join(vault, 'music/stations.md'), '- Aaron Frazer\n- Curtis Harding\n');

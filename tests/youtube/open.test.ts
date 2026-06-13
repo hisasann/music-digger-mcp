@@ -12,7 +12,7 @@ describe('videoUrl', () => {
 });
 
 describe('openInSafari', () => {
-  it('runs `open -a Safari <url>`', async () => {
+  it('without previousVideoId: runs `open -a Safari <url>` to open a fresh tab', async () => {
     const runner = vi.fn(async () => 0);
     await openInSafari('Blg_vkaXSWI', runner);
     expect(runner).toHaveBeenCalledWith('open', [
@@ -22,8 +22,26 @@ describe('openInSafari', () => {
     ]);
   });
 
+  it('with previousVideoId: runs an osascript that overwrites the matching tab in place', async () => {
+    const runner = vi.fn(async () => 0);
+    await openInSafari('NEW_ID', runner, { previousVideoId: 'OLD_ID' });
+    expect(runner).toHaveBeenCalledTimes(1);
+    expect(runner.mock.calls[0][0]).toBe('osascript');
+    const script = (runner.mock.calls[0][1] as string[])[1];
+    expect(script).toContain('tell application "Safari"');
+    expect(script).toContain('OLD_ID');
+    expect(script).toContain('https://www.youtube.com/watch?v=NEW_ID');
+    // Fallback path for when the previous tab was closed manually:
+    expect(script).toContain('if not didReplace then open location');
+  });
+
   it('throws when the open command exits non-zero', async () => {
     const runner = vi.fn(async () => 1);
     await expect(openInSafari('x', runner)).rejects.toThrow(/exit/i);
+  });
+
+  it('throws when the osascript replacement step fails', async () => {
+    const runner = vi.fn(async () => 2);
+    await expect(openInSafari('x', runner, { previousVideoId: 'y' })).rejects.toThrow(/exit/i);
   });
 });

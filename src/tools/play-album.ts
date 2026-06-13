@@ -31,7 +31,8 @@ export async function handlePlayAlbum(
     const chosen = videos[0];
     if (!chosen) return { playing: false, reason: 'search_empty' };
 
-    await openInSafari(chosen.videoId, deps.opener);
+    const prev = deps.store.get();
+    await openInSafari(chosen.videoId, deps.opener, { previousVideoId: prev?.videoId });
 
     const url = videoUrl(chosen.videoId);
     const now = (deps.now ?? (() => new Date()))();

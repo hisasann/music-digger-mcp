@@ -41,7 +41,8 @@ export async function handlePlayStation(
     const chosen = preferTopicChannel(videos);
     if (!chosen) return { playing: false, reason: 'search_empty' };
 
-    await openInSafari(chosen.videoId, deps.opener);
+    const prev = deps.store.get();
+    await openInSafari(chosen.videoId, deps.opener, { previousVideoId: prev?.videoId });
 
     const url = videoUrl(chosen.videoId);
     const now = (deps.now ?? (() => new Date()))();
