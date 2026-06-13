@@ -12,7 +12,7 @@ const cfg = (vault: string) => ({
   stationsPath: 'music/stations.md',
 });
 
-const fakeYouTubeHtml = (videos: { videoId: string; title: string; channel: string; duration?: string }[]) => {
+const fakeYouTubeHtml = (videos: { videoId: string; title: string; channel: string }[]) => {
   const data = {
     contents: {
       twoColumnSearchResultsRenderer: {
@@ -26,7 +26,6 @@ const fakeYouTubeHtml = (videos: { videoId: string; title: string; channel: stri
                       videoId: v.videoId,
                       title: { simpleText: v.title },
                       ownerText: { runs: [{ text: v.channel }] },
-                      lengthText: v.duration ? { simpleText: v.duration } : undefined,
                     },
                   })),
                 },
@@ -40,82 +39,40 @@ const fakeYouTubeHtml = (videos: { videoId: string; title: string; channel: stri
   return `<html><script>var ytInitialData = ${JSON.stringify(data)};</script></html>`;
 };
 
-const itunesHit = (artist: string, track: string, url: string) =>
-  new Response(
-    JSON.stringify({
-      resultCount: 1,
-      results: [{ trackId: 1, trackName: track, artistName: artist, collectionName: 'Album', trackViewUrl: url }],
-    }),
-    { status: 200 },
-  );
-
-const itunesEmpty = () =>
-  new Response(JSON.stringify({ resultCount: 0, results: [] }), { status: 200 });
-
 describe('handlePlayStation', () => {
   let vault: string;
   beforeEach(() => { vault = mkdtempSync(join(tmpdir(), 'mdv-')); });
   afterEach(() => { rmSync(vault, { recursive: true, force: true }); });
 
-  it('iTunes hit → opens Music.app and records playedIn=apple_music', async () => {
+  it('searches YouTube, prefers the Topic channel, opens Safari, stores playedIn=youtube', async () => {
     const store = createPlaybackStore();
     const ytFetcher = vi.fn(async () => new Response(
-      fakeYouTubeHtml([{ videoId: 'bbb', title: 'Aaron Frazer - Bad News', channel: 'Aaron Frazer - Topic' }]),
+      fakeYouTubeHtml([
+        { videoId: 'aaa', title: 'Random Cover', channel: 'Some Cover Channel' },
+        { videoId: 'bbb', title: 'Aaron Frazer - Bad News', channel: 'Aaron Frazer - Topic' },
+      ]),
       { status: 200 },
     ));
-    const itunesFetcher = vi.fn(async () => itunesHit('Aaron Frazer', 'Bad News', 'https://music.apple.com/jp/x?i=1'));
     const opener = vi.fn(async () => 0);
+    const now = () => new Date('2026-06-13T10:00:00Z');
 
     const r = await handlePlayStation(
-      {
-        cfg: cfg(vault),
-        store,
-        search: { fetcher: ytFetcher },
-        itunes: { fetcher: itunesFetcher },
-        opener,
-      },
+      { cfg: cfg(vault), store, search: { fetcher: ytFetcher }, opener, now },
       { seed: 'Aaron Frazer' },
     );
 
-    expect((r as any).playing).toBe(true);
-    expect((r as any).played_in).toBe('apple_music');
-    expect((r as any).now_playing).toMatchObject({
-      videoId: 'bbb',
-      apple_music_url: 'https://music.apple.com/jp/x?i=1',
-      apple_music_artist: 'Aaron Frazer',
-      apple_music_track: 'Bad News',
-    });
-    expect(opener).toHaveBeenCalledWith('osascript', [
-      '-e',
-      'tell application "Music" to open location "https://music.apple.com/jp/x?i=1"',
-    ]);
-    expect(store.get()).toMatchObject({ playedIn: 'apple_music', appleMusicUrl: 'https://music.apple.com/jp/x?i=1' });
-  });
-
-  it('iTunes miss → falls back to Safari and records playedIn=youtube', async () => {
-    const store = createPlaybackStore();
-    const ytFetcher = vi.fn(async () => new Response(
-      fakeYouTubeHtml([{ videoId: 'liveid', title: 'Some Live Cover That Itunes Doesnt Have', channel: 'Random' }]),
-      { status: 200 },
-    ));
-    const itunesFetcher = vi.fn(async () => itunesEmpty());
-    const opener = vi.fn(async () => 0);
-
-    const r = await handlePlayStation(
-      {
-        cfg: cfg(vault),
-        store,
-        search: { fetcher: ytFetcher },
-        itunes: { fetcher: itunesFetcher },
-        opener,
+    expect(r).toEqual({
+      playing: true,
+      seed: 'Aaron Frazer',
+      now_playing: {
+        videoId: 'bbb',
+        title: 'Aaron Frazer - Bad News',
+        channel: 'Aaron Frazer - Topic',
+        url: 'https://www.youtube.com/watch?v=bbb',
       },
-      { seed: 'something obscure' },
-    );
-
-    expect((r as any).playing).toBe(true);
-    expect((r as any).played_in).toBe('youtube');
-    expect(opener).toHaveBeenCalledWith('open', ['-a', 'Safari', 'https://www.youtube.com/watch?v=liveid']);
-    expect(store.get()).toMatchObject({ playedIn: 'youtube' });
+    });
+    expect(opener).toHaveBeenCalledWith('open', ['-a', 'Safari', 'https://www.youtube.com/watch?v=bbb']);
+    expect(store.get()).toMatchObject({ videoId: 'bbb', sourceSeed: 'Aaron Frazer', playedIn: 'youtube' });
   });
 
   it('falls back to the stations note when seed is omitted', async () => {
@@ -126,41 +83,25 @@ describe('handlePlayStation', () => {
       fakeYouTubeHtml([{ videoId: 'ch1', title: 'Curtis Harding - The Power', channel: 'Curtis Harding - Topic' }]),
       { status: 200 },
     ));
-    const itunesFetcher = vi.fn(async () => itunesHit('Curtis Harding', 'The Power', 'https://music.apple.com/jp/p'));
     const opener = vi.fn(async () => 0);
-    const rng = () => 0.99; // last seed
+    const rng = () => 0.99;
 
     const r = await handlePlayStation(
-      {
-        cfg: cfg(vault),
-        store,
-        search: { fetcher: ytFetcher },
-        itunes: { fetcher: itunesFetcher },
-        opener,
-        rng,
-      },
+      { cfg: cfg(vault), store, search: { fetcher: ytFetcher }, opener, rng },
       {},
     );
 
     expect((r as any).playing).toBe(true);
     expect((r as any).seed).toBe('Curtis Harding');
-    const ytUrl = ytFetcher.mock.calls[0][0] as string;
-    expect(ytUrl).toContain('search_query=Curtis%20Harding');
+    expect((ytFetcher.mock.calls[0][0] as string)).toContain('search_query=Curtis%20Harding');
   });
 
   it('returns no_seeds when stations note is missing', async () => {
     const store = createPlaybackStore();
     const ytFetcher = vi.fn();
-    const itunesFetcher = vi.fn();
     const opener = vi.fn();
     const r = await handlePlayStation(
-      {
-        cfg: cfg(vault),
-        store,
-        search: { fetcher: ytFetcher },
-        itunes: { fetcher: itunesFetcher },
-        opener,
-      },
+      { cfg: cfg(vault), store, search: { fetcher: ytFetcher }, opener },
       {},
     );
     expect(r).toEqual({ playing: false, reason: 'no_seeds' });
@@ -189,6 +130,6 @@ describe('handlePlayStation', () => {
       { seed: 'X' },
     );
     expect((r as any).ok).toBe(false);
-    expect((r as any).error.code).toBe('playback_unavailable');
+    expect((r as any).error.code).toBe('youtube_unavailable');
   });
 });

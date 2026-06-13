@@ -93,10 +93,7 @@ describe('handleMarkCurrent', () => {
       matched_artist: 'Marvin Gaye',
       matched_track: 'Inner City Blues',
     });
-    expect(opener).toHaveBeenCalledWith('osascript', [
-      '-e',
-      'tell application "Music" to open location "https://music.apple.com/jp/x?i=1"',
-    ]);
+    expect(opener).toHaveBeenCalledWith('open', ['-a', 'Music', 'https://music.apple.com/jp/x?i=1']);
 
     const diary = readFileSync(join(vault, 'music/diary/2026-06-12.md'), 'utf8');
     expect(diary).toContain('## 21:35 — ♥ Marvin Gaye / Inner City Blues');

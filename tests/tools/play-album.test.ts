@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { handlePlayAlbum } from '../../src/tools/play-album.js';
 import { createPlaybackStore } from '../../src/state.js';
 
-const fakeYouTubeHtml = (videos: { videoId: string; title: string; channel: string; duration?: string }[]) => {
+const fakeYouTubeHtml = (videos: { videoId: string; title: string; channel: string }[]) => {
   const data = {
     contents: {
       twoColumnSearchResultsRenderer: {
@@ -16,7 +16,6 @@ const fakeYouTubeHtml = (videos: { videoId: string; title: string; channel: stri
                       videoId: v.videoId,
                       title: { simpleText: v.title },
                       ownerText: { runs: [{ text: v.channel }] },
-                      lengthText: v.duration ? { simpleText: v.duration } : undefined,
                     },
                   })),
                 },
@@ -30,65 +29,39 @@ const fakeYouTubeHtml = (videos: { videoId: string; title: string; channel: stri
   return `<html><script>var ytInitialData = ${JSON.stringify(data)};</script></html>`;
 };
 
-const itunesHit = (artist: string, track: string, url: string) =>
-  new Response(
-    JSON.stringify({
-      resultCount: 1,
-      results: [{ trackId: 1, trackName: track, artistName: artist, collectionName: 'Album', trackViewUrl: url }],
-    }),
-    { status: 200 },
-  );
-
-const itunesEmpty = () =>
-  new Response(JSON.stringify({ resultCount: 0, results: [] }), { status: 200 });
-
 describe('handlePlayAlbum', () => {
-  it('iTunes hit → opens Music.app and records playedIn=apple_music', async () => {
+  it('searches YouTube for a full-album upload, opens Safari, stores playedIn=youtube', async () => {
     const store = createPlaybackStore();
     const ytFetcher = vi.fn(async () => new Response(
       fakeYouTubeHtml([
-        { videoId: 'fullid', title: "Marvin Gaye - What's Going On (Full Album)", channel: 'Some Uploader' },
+        { videoId: 'fullid', title: 'Marvin Gaye - What\'s Going On (Full Album)', channel: 'Some Uploader' },
       ]),
       { status: 200 },
     ));
-    const itunesFetcher = vi.fn(async () =>
-      itunesHit('Marvin Gaye', "What's Going On", 'https://music.apple.com/jp/album/wgo'),
-    );
     const opener = vi.fn(async () => 0);
     const now = () => new Date('2026-06-13T10:00:00Z');
 
     const r = await handlePlayAlbum(
-      { store, search: { fetcher: ytFetcher }, itunes: { fetcher: itunesFetcher }, opener, now },
+      { store, search: { fetcher: ytFetcher }, opener, now },
       { artist: 'Marvin Gaye', album: "What's Going On" },
     );
 
-    expect((r as any).playing).toBe(true);
-    expect((r as any).played_in).toBe('apple_music');
-    expect((r as any).now_playing.apple_music_url).toBe('https://music.apple.com/jp/album/wgo');
-    expect(opener).toHaveBeenCalledWith('osascript', [
-      '-e',
-      'tell application "Music" to open location "https://music.apple.com/jp/album/wgo"',
-    ]);
-    expect(store.get()).toMatchObject({ playedIn: 'apple_music', sourceSeed: "Marvin Gaye / What's Going On" });
-  });
-
-  it('iTunes miss → falls back to Safari and records playedIn=youtube', async () => {
-    const store = createPlaybackStore();
-    const ytFetcher = vi.fn(async () => new Response(
-      fakeYouTubeHtml([{ videoId: 'liveid', title: 'Some Live Bootleg', channel: 'Bootleg Uploader' }]),
-      { status: 200 },
-    ));
-    const itunesFetcher = vi.fn(async () => itunesEmpty());
-    const opener = vi.fn(async () => 0);
-
-    const r = await handlePlayAlbum(
-      { store, search: { fetcher: ytFetcher }, itunes: { fetcher: itunesFetcher }, opener },
-      { artist: 'X', album: 'Y' },
-    );
-
-    expect((r as any).playing).toBe(true);
-    expect((r as any).played_in).toBe('youtube');
-    expect(opener).toHaveBeenCalledWith('open', ['-a', 'Safari', 'https://www.youtube.com/watch?v=liveid']);
+    expect(r).toEqual({
+      playing: true,
+      artist: 'Marvin Gaye',
+      album: "What's Going On",
+      now_playing: {
+        videoId: 'fullid',
+        title: 'Marvin Gaye - What\'s Going On (Full Album)',
+        channel: 'Some Uploader',
+        url: 'https://www.youtube.com/watch?v=fullid',
+      },
+    });
+    const searchUrl = ytFetcher.mock.calls[0][0] as string;
+    expect(searchUrl).toContain('search_query=Marvin');
+    expect(searchUrl).toContain('full');
+    expect(opener).toHaveBeenCalledWith('open', ['-a', 'Safari', 'https://www.youtube.com/watch?v=fullid']);
+    expect(store.get()).toMatchObject({ videoId: 'fullid', sourceSeed: "Marvin Gaye / What's Going On", playedIn: 'youtube' });
   });
 
   it('returns search_empty when YouTube returns no videos', async () => {
@@ -113,7 +86,7 @@ describe('handlePlayAlbum', () => {
       { artist: 'A', album: 'B' },
     );
     expect((r as any).ok).toBe(false);
-    expect((r as any).error.code).toBe('playback_unavailable');
+    expect((r as any).error.code).toBe('youtube_unavailable');
     expect(opener).not.toHaveBeenCalled();
   });
 });

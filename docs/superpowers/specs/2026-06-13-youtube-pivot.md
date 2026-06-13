@@ -243,7 +243,38 @@ Phase 1 / 2 / 3 を一気に着地。
 - `playback_control` の Safari / Music.app での復活（必要になったら）
 - 親仕様書 `2026-06-12-music-digger-mcp-design.md` を v2 として書き直し
 
-## 11. 再ピボット：YouTube は検索エンジン、再生は Apple Music（2026-06-13 同日後半）
+## 11. 再ピボット試行と撤回：再生は YouTube + Safari に戻す（2026-06-13 同日後半）
+
+### 11.0 結論先出し
+
+「YouTube で見つけて Apple Music で再生」を試みたが、**Apple Music カタログの特定トラックを AppleScript から自動再生する手段が無い**ことが実機検証で判明したため、再生は再び **YouTube + Safari** に統一。Apple Music へのハンドオフは `mark_current(love|like)` 時のみに戻した。
+
+### 検証で出尽くした選択肢（全部「特定曲再生」には届かなかった）
+
+| 方法 | navigate | 自動再生 | `?i=trackId` 解釈 |
+|---|---|---|---|
+| `open <https URL>` | ブラウザに行く | — | — |
+| `open -a Music <URL>` | ✓ | ✗ | — |
+| `open music://...` | ✓ | ✗ | — |
+| `tell Music to open location URL` | ✓ | ✗ | **✗** |
+| 上記 + `delay` + `play` | ✓ | ✓ | **✗ → アルバム 1 曲目** |
+
+`play` の direct-parameter は Music.app 内 specifier（=library 内 track）限定で、カタログ trackId を直接渡せない。`?i=trackId` パラメータはアルバム navigate の URL から無視される。結果、何をやっても「アルバム 1 曲目から再生」になり、検索でヒットした曲とは別物が鳴ってしまう。
+
+実害として `play_station("Marvin Gaye")` が Gil Scott-Heron や Billie Eilish を再生する事故が出た（前者は前回 paused 状態の race、後者は YouTube タイトル誤解析と相まって発生）。
+
+### 取り直した形
+
+- `play_station` / `play_album` は **YouTube + Safari** で再生。`playedIn` は常に `'youtube'`
+- `mark_current(love|like)` のとき iTunes Search で楽曲を引いて **Music.app に navigate するだけ**（自動再生は要求しない）
+- `src/itunes/match.ts` の `lookupAppleMusic` は使い所がなくなったので削除
+- `src/itunes/open.ts` を `open -a Music <url>` に戻し、AppleScript 経由の `open location` + `play` 連鎖は廃止
+- README / spec memo を「YouTube で再生、Apple Music は love 時のハンドオフ専用」に揃え直し
+- テスト 117 件 green
+
+### 旧 §11 で書いた設計（YouTube 検索エンジン化 + Apple Music 再生）は撤回。下の記録は当時の意図として残す。
+
+## 11.5 撤回した設計の記録（旧 §11）
 
 ### 11.1 きっかけ
 
