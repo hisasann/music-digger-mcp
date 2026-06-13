@@ -1,3 +1,5 @@
+export type PlayedIn = 'apple_music' | 'youtube';
+
 export interface CurrentPlayback {
   videoId: string;
   title: string;
@@ -5,6 +7,10 @@ export interface CurrentPlayback {
   url: string;
   sourceSeed?: string;
   startedAt: string;
+  playedIn: PlayedIn;
+  appleMusicUrl?: string;
+  appleMusicArtist?: string;
+  appleMusicTrack?: string;
 }
 
 export interface PlaybackStore {

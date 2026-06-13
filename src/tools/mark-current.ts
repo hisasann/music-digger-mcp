@@ -26,7 +26,7 @@ export interface MarkCurrentClock { now: () => Date; }
 
 export type AppleMusicOpened =
   | { opened: true; url: string; matched_artist: string; matched_track: string }
-  | { opened: false; reason: 'no_match' | 'search_failed' | 'skipped_reaction' };
+  | { opened: false; reason: 'no_match' | 'search_failed' | 'skipped_reaction' | 'already_in_apple_music' };
 
 export type MarkCurrentOutput =
   | { marked: false; reason: 'nothing_playing' }
@@ -133,7 +133,12 @@ export async function handleMarkCurrent(
   const diaries = await readAllDiaries(cfg);
   const counts = parseAlbumReactions(diaries, artist, album);
 
-  const apple_music = await maybeOpenInAppleMusic(artist, track, input.reaction, deps);
+  let apple_music: AppleMusicOpened;
+  if (current.playedIn === 'apple_music') {
+    apple_music = { opened: false, reason: 'already_in_apple_music' };
+  } else {
+    apple_music = await maybeOpenInAppleMusic(artist, track, input.reaction, deps);
+  }
 
   if (shouldPromote(counts)) {
     const card_path = await upsertAlbumCard(cfg, {

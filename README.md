@@ -6,16 +6,18 @@ YouTube + Safari + Apple Music で音楽を掘るための MCP サーバー。Cl
 
 ## ワークフロー
 
-1. `play_station("Roy Ayers")` → YouTube 検索 → Safari で再生（autoplay 無し、MCP が制御）
-2. 気に入ったら `mark_current("love")` → Obsidian 日記に追記 + **Music.app で同じ曲を開く**（ライブラリ追加判断はユーザー）
+1. `play_station("Roy Ayers")` → YouTube で検索（裏で実行、UI には出さない）→ 見つけた曲を iTunes Search API で照合 → **ヒットすれば Music.app で自動再生**（高音質）／**外れたら Safari で YouTube fallback**（カバー・ライブ等）
+2. 気に入ったら `mark_current("love")` → Obsidian 日記に追記。既に Apple Music で再生中なら open は冗長なので skip、YouTube fallback で再生中なら Music.app にハンドオフ
 3. love 1 回 or like 2 回でアルバムカードに自動昇格
+
+> YouTube は**検索エンジン**として使い、再生は基本 **Apple Music**。digger としての発見力 × 再生の高音質を両取りする設計。
 
 ## Tools
 
-- `play_station(seed?)` — YouTube 検索で seed の station を Safari で起動。seed 省略時は `music/stations.md` からランダム
-- `play_album(artist, album)` — `<artist> <album> full album` で YouTube 検索 → Safari
-- `current_track()` — MCP が「最後に再生指示した曲」の情報を返す（ブラウザに問い合わせない）
-- `mark_current(reaction, note?, artist?, album?, track?)` — 現在曲を love / like / meh / skip でマーク。日記追記 + 昇格判定。love / like の時は iTunes Search API で Apple Music カタログを引いて、Music.app に楽曲ページを開く
+- `play_station(seed?)` — YouTube で seed を検索 → iTunes 照合 → Music.app 再生 or Safari fallback。seed 省略時は `music/stations.md` からランダム
+- `play_album(artist, album)` — iTunes 検索 + YouTube `<artist> <album> full album` 検索を並走。Apple Music にあればそちらで、なければ YouTube に
+- `current_track()` — MCP が「最後に再生指示した曲」の情報（YouTube 由来 + Apple Music 由来）を返す
+- `mark_current(reaction, note?, artist?, album?, track?)` — 現在曲を love / like / meh / skip でマーク。日記追記 + 昇格判定。`playedIn` が `youtube` の場合のみ Apple Music に持ち込む
 
 ## 動作環境
 

@@ -242,3 +242,49 @@ Phase 1 / 2 / 3 を一気に着地。
 - YouTube タイトルのパース精度（ハイフン違い、feat. 表記、Lyrics ビデオ等）を実運用で詰める
 - `playback_control` の Safari / Music.app での復活（必要になったら）
 - 親仕様書 `2026-06-12-music-digger-mcp-design.md` を v2 として書き直し
+
+## 11. 再ピボット：YouTube は検索エンジン、再生は Apple Music（2026-06-13 同日後半）
+
+### 11.1 きっかけ
+
+実機検証で 2 点判明：
+
+1. `open https://music.apple.com/...` だと macOS のデフォルトハンドラ（ブラウザ）に行ってしまい、Music.app は開かない。`open -a Music <url>` が必要
+2. ユーザー本来の意図は「YouTube を**カタログ検索エンジン**として使い、再生は **Apple Music** で行いたい」だった。YouTube を画面上で開くのは結果に過ぎない
+
+### 11.2 新フロー
+
+```
+play_station(seed)
+  ↓ YouTube scrape（裏で、Safari は開かない）
+  ↓ 上位ヒットの title から artist + track 切り出し（parseTrackTitle）
+  ↓ iTunes Search API で Apple Music カタログ照合（lookupAppleMusic）
+  ├─ ヒット → openAppleMusicUrl で `open -a Music <trackViewUrl>` → Music.app 再生
+  │           store.playedIn = 'apple_music'
+  └─ 外れ   → openInSafari で YouTube fallback（カバー・ライブ等は YouTube にしか無い）
+              store.playedIn = 'youtube'
+```
+
+### 11.3 重複排除
+
+「Apple Music に持ち込む」責務は **`play_station` / `play_album` が一手に持つ**。`mark_current` は：
+
+- `state.playedIn === 'apple_music'` のとき → 既に Apple Music で再生中なので open は **冗長スキップ**（`apple_music: { opened: false, reason: 'already_in_apple_music' }`）
+- `state.playedIn === 'youtube'` のとき → 従来通り iTunes 検索 + Music.app open（YouTube fallback で見つけた曲を love したら Apple Music に拾い直す）
+
+これで「同じ機能が 2 箇所」状態を解消。
+
+### 11.4 副作用
+
+- **Safari タブの累積問題が消える**：通常パスでは Safari を起動しない。fallback でのみタブが増える
+- **レスポンス改善余地**：Safari 起動コストが消える。残るボトルネックは YouTube HTML scrape（1.2MB、約 0.6s）。`m.youtube.com` への切り替えで 半分（530KB）まで落とせることを実測済み（別タスク）
+- `state` に `playedIn` / `appleMusicUrl` / `appleMusicArtist` / `appleMusicTrack` を追加
+
+### 11.5 ファイル変更
+
+- 新規 `src/itunes/match.ts`：`lookupAppleMusic(title, channel, deps)` 共通ヘルパー
+- `src/itunes/open.ts`：`open -a Music` 強制
+- `src/state.ts`：`playedIn` 等の追加
+- `src/tools/play-station.ts` / `play-album.ts`：iTunes 照合 → Apple Music or Safari fallback の二分岐
+- `src/tools/mark-current.ts`：`playedIn` 分岐で重複 open を排除
+- テスト：fetcher mock を YouTube / iTunes で URL 分岐し、両ルートを網羅。**119 件 green**

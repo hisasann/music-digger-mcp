@@ -12,13 +12,19 @@ const cfg = (vault: string) => ({
   stationsPath: 'music/stations.md',
 });
 
-function withTrack(store: PlaybackStore, title: string, channel: string): void {
+function withTrack(
+  store: PlaybackStore,
+  title: string,
+  channel: string,
+  playedIn: 'apple_music' | 'youtube' = 'youtube',
+): void {
   store.set({
     videoId: 'vid',
     title,
     channel,
     url: 'https://www.youtube.com/watch?v=vid',
     startedAt: '2026-06-12T21:35:00.000Z',
+    playedIn,
   });
 }
 
@@ -47,7 +53,24 @@ describe('handleMarkCurrent', () => {
     expect(r).toEqual({ marked: false, reason: 'nothing_playing' });
   });
 
-  it('on love: writes diary, opens Apple Music, and promotes', async () => {
+  it('when already playing in Apple Music: writes diary but skips Apple Music open', async () => {
+    const store = createPlaybackStore();
+    withTrack(store, 'Curtis Harding - The Power', 'Curtis Harding', 'apple_music');
+    const fetcher = vi.fn();
+    const opener = vi.fn();
+    const r = await handleMarkCurrent(
+      { store, itunes: { fetcher }, opener },
+      cfg(vault),
+      { reaction: 'love' },
+      { now: () => new Date('2026-06-13T10:00:00') },
+    );
+    expect((r as any).marked).toBe(true);
+    expect((r as any).apple_music).toEqual({ opened: false, reason: 'already_in_apple_music' });
+    expect(opener).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('on love (YouTube fallback): writes diary, opens Apple Music, and promotes', async () => {
     const store = createPlaybackStore();
     withTrack(store, 'Marvin Gaye - Inner City Blues (Official Audio)', 'Marvin Gaye - Topic');
     const fetcher = vi.fn(async () =>
@@ -70,7 +93,7 @@ describe('handleMarkCurrent', () => {
       matched_artist: 'Marvin Gaye',
       matched_track: 'Inner City Blues',
     });
-    expect(opener).toHaveBeenCalledWith('open', ['https://music.apple.com/jp/x?i=1']);
+    expect(opener).toHaveBeenCalledWith('open', ['-a', 'Music', 'https://music.apple.com/jp/x?i=1']);
 
     const diary = readFileSync(join(vault, 'music/diary/2026-06-12.md'), 'utf8');
     expect(diary).toContain('## 21:35 — ♥ Marvin Gaye / Inner City Blues');
